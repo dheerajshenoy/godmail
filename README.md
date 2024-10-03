@@ -3,9 +3,10 @@ A go program to send mail with file attachment capabilities
 
 # Configuration
 
-*NOTE: Please add a config file at `~/.config/godmail/config.json` with password field*
 
 Configuration file stores the default values for email, password, subject. These fields are accessed when no flag for the corresponding field is passed to `godmail`.
+
+Config should be placed at `~/.config/godmail/config.json`
 
 ```json
 {
