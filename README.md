@@ -22,3 +22,10 @@ Configuration file stores the default values for email, password, subject. These
 
 In this case, `from address` and `password` is used from the config file (if it exists).
 
+
+# TODOs
+
+- [x] Attach text
+- [x] Attach files
+- [ ] Delayed sending
+
