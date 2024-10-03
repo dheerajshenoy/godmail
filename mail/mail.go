@@ -1,17 +1,17 @@
 package mail
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/base64"
-	"flag"
-	"fmt"
-	"mime/multipart"
-	"net/smtp"
-	"os"
-	"path/filepath"
-	"strings"
-	"encoding/json"
+    "bufio"
+    "bytes"
+    "encoding/base64"
+    "flag"
+    "fmt"
+    "mime/multipart"
+    "net/smtp"
+    "os"
+    "path/filepath"
+    "strings"
+    "encoding/json"
 )
 
 var PACKAGE_NAME string = "godmail"
@@ -25,24 +25,24 @@ func sendMail(fromAddr string, password string, toAddr[] string, subject string,
     auth := smtp.PlainAuth("", fromAddr, password, smtpHost)
 
     // Create the body of the message
-	writer := multipart.NewWriter(&body)
+    writer := multipart.NewWriter(&body)
 
-	// If body is empty, make it empty
-	if body.String() == "" {
-		body.WriteString("")
-	}
+    // If body is empty, make it empty
+    if body.String() == "" {
+        body.WriteString("")
+    }
 
-	// Add email text body
-	textWriter, _ := writer.CreatePart(map[string][]string{
-		"Content-Type": {"text/plain; charset=UTF-8"},
-	})
-	textWriter.Write([]byte(body.String()))
+    // Add email text body
+    textWriter, _ := writer.CreatePart(map[string][]string{
+        "Content-Type": {"text/plain; charset=UTF-8"},
+    })
+    textWriter.Write([]byte(body.String()))
 
     // Add attachment
 
-	for i := 0; i < len(files); i++ {
-		attachFile(writer, files[i])
-	}
+    for i := 0; i < len(files); i++ {
+        attachFile(writer, files[i])
+    }
 
     writer.Close()
 
@@ -61,17 +61,17 @@ func sendMail(fromAddr string, password string, toAddr[] string, subject string,
     }
     msg.WriteString("\r\n")
 
-	msg.Write(body.Bytes())
+    msg.Write(body.Bytes())
 
     // Send email
     err := smtp.SendMail(smtpHost+":"+smtpPort, auth, fromAddr, toAddr, msg.Bytes())
 
     if err != nil {
         fmt.Println("Error:", err)
-		return false, err
-	}
+        return false, err
+    }
 
-	return true, nil
+    return true, nil
 }
 
 // Function to attach a file
@@ -114,37 +114,38 @@ func confirmSendingMail(fromAddr string, toAddr[] string, password string, subje
     // Create a reader for standard input
     reader := bufio.NewReader(os.Stdin)
 
-	fmt.Println("\nSender Email Address: ", fromAddr)
-	fmt.Println("Receipient Email Address: ", strings.Join(toAddr, ","))
-	fmt.Println("Body: ", body)
-	fmt.Println("Files: ", strings.Join(files, ","))
+    fmt.Println("\nSender Email Address: ", fromAddr)
+    fmt.Println("Receipient Email Address: ", strings.Join(toAddr, ","))
+    fmt.Println("Body: ", body)
+    fmt.Println("Files: ", strings.Join(files, ","))
 
     // Prompt the user for input
     fmt.Print("Is this okay (y/n): ")
 
-	// Read the input from the user
-	confirmation, err := reader.ReadString('\n') // Read until a newline character
+    // Read the input from the user
+    confirmation, err := reader.ReadString('\n') // Read until a newline character
 
-	if err != nil {
-		fmt.Println("Error reading input:", err)
-		return
-	}
+    if err != nil {
+        fmt.Println("Error reading input:", err)
+        return
+    }
 
     confirmation = strings.TrimSpace(strings.ToLower(confirmation))
-	if confirmation == "y" {
-		var bodyBytesBuffer bytes.Buffer
-		bodyBytesBuffer.WriteString(body)
-		_, err := sendMail(fromAddr, password, toAddr, subject, bodyBytesBuffer, files)
-		if err != nil {
-			fmt.Println("Error while sending mail", err)
-		}
-		fmt.Println("Email Sent Successfully")
-	}
+    if confirmation == "y" {
+        var bodyBytesBuffer bytes.Buffer
+        bodyBytesBuffer.WriteString(body)
+        _, err := sendMail(fromAddr, password, toAddr, subject, bodyBytesBuffer, files)
+        if err != nil {
+            fmt.Println("Error while sending mail", err)
+        }
+        fmt.Println("Email Sent Successfully")
+    }
 
 }
 
 type Config struct {
-    Password    string        `json:"password"`
+	Password string `json:"password"`
+	Email string `json:email"`
 }
 
 func pathExists(path string) (bool, error) {
@@ -157,82 +158,85 @@ func pathExists(path string) (bool, error) {
 // Function to handle and parse arguments passed to the program
 func Mail() {
 
-	fromAddrFlag := flag.String("from", "", "Senders email address")
-	toAddrFlag := flag.String("to", "", "Receipient email address or addresses")
-	subjectFlag := flag.String("subject", "", "Subject of the email")
-	bodyFlag := flag.String("body", "", "Body of the email")
-	_ = flag.String("editor", "false", "Open editor for writing the body of the email")
-	filesFlag := flag.String("files", "", "Files to attach")
-	passwordFlag := flag.String("password", "", "Senders email password (Use this only as a last resort)")
+    fromAddrFlag := flag.String("from", "", "Senders email address")
+    toAddrFlag := flag.String("to", "", "one or more Receipient email addresses")
+    subjectFlag := flag.String("subject", "", "Subject of the email")
+    bodyFlag := flag.String("body", "", "Body of the email")
+    editorFlag := flag.Bool("editor", true, "Open editor for writing the body of the email")
+    filesFlag := flag.String("files", "", "Files to attach")
+    passwordFlag := flag.String("password", "", "Senders email password (Use this only as a last resort)")
 
-	flag.Parse()
+    flag.Parse()
 
-	// Get list of all flags specified on command line
-	specifiedFlags := make(map[string]bool)
-	flag.CommandLine.Visit(func(f *flag.Flag) {
-		specifiedFlags[f.Name] = true
-	})
+    // Read config file, if it exists
+    var conf Config
 
-	// Read config file, if it exists
-	var conf Config
+    configDir, err := os.UserConfigDir()
 
-	configDir, err := os.UserConfigDir()
+    if err == nil {
+        configFile := filepath.Join(configDir, PACKAGE_NAME, "config.json")
+        exists, err := pathExists(configFile)
 
-	if err == nil {
-		configFile := filepath.Join(configDir, PACKAGE_NAME, "config.json")
-		exists, err := pathExists(configFile)
+        if exists && err == nil {
 
-		if exists && err == nil {
+            file, err := os.Open(configFile)
+            if err != nil {
+                fmt.Println("Error:", err)
+                return
+            }
+            defer file.Close()
 
-			file, err := os.Open(configFile)
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-			defer file.Close()
+            decoder := json.NewDecoder(file)
+            if err := decoder.Decode(&conf); err != nil {
+                fmt.Println("Error decoding JSON:", err)
+                return
+            }
+        }
+    }
 
-			decoder := json.NewDecoder(file)
-			if err := decoder.Decode(&conf); err != nil {
-				fmt.Println("Error decoding JSON:", err)
-				return
-			}
+	var fromAddress string
+    var password string
+	var toAddrs []string
+
+
+    if *fromAddrFlag == "" {
+		if conf.Email != "" {
+			fromAddress = conf.Email
+		} else {
+			fmt.Println("Error: -name flag is required")
+			os.Exit(-1)
 		}
+    }
+
+    if *toAddrFlag == "" {
+        fmt.Println("Error: -to flag is required")
+        os.Exit(-1)
+    } else {
+		toAddrs = strings.Split(*toAddrFlag, ",")
 	}
 
-	if *fromAddrFlag == "" {
-		fmt.Println("Error: -name flag is required")
-		os.Exit(-1)
+    if *subjectFlag == "" {
+        fmt.Println("No subject found, using default subject value")
+        *subjectFlag = "Subject"
+    }
+
+    // TODO: Use vim/nano/something else for asking body of the email
+	if *editorFlag {
+
 	}
 
-	if *toAddrFlag == "" {
-		fmt.Println("Error: -to flag is required")
-		os.Exit(-1)
-	}
+    if *passwordFlag == "" {
+        password = conf.Password
+    } else {
+        password = *passwordFlag
+    }
 
-	if *subjectFlag == "" {
-		fmt.Println("No subject found, using default subject value")
-		*subjectFlag = "Subject"
-	}
+    files := []string{}
 
-	// TODO: Use vim/nano/something else for asking body of the email
-	if specifiedFlags["editor"] {
-		
-	}
+    if *filesFlag != "" {
+        files = strings.Split(*filesFlag, ",")
+    } 
+    // confirmSendingMail(*fromAddrFlag, [] string { *toAddrFlag } , *passwordFlag, *bodyFlag, [] string {*filesFlag})
 
-	password := ""
-
-	if *passwordFlag == "" {
-		password = conf.Password
-	} else {
-		password = *passwordFlag
-	}
-
-	files := []string{}
-
-	if *filesFlag != "" {
-		files = strings.Split(*filesFlag, ",")
-	} 
-	// confirmSendingMail(*fromAddrFlag, [] string { *toAddrFlag } , *passwordFlag, *bodyFlag, [] string {*filesFlag})
-
-	confirmSendingMail(*fromAddrFlag, [] string { *toAddrFlag } , password, *subjectFlag, *bodyFlag, files)
+    confirmSendingMail(fromAddress, toAddrs, password, *subjectFlag, *bodyFlag, files)
 }
